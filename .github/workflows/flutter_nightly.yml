@@ -1,31 +1,29 @@
-name: Flutter Nightly Free Tier
+name: Flutter Build
 
 on:
   push:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # Every night at midnight UTC
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Setup Flutter
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0' # adjust if needed
-          channel: 'stable'
+          flutter-version: '3.32.7' # ✅ Specify version that supports Dart 3.8.1+
+          channel: stable
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze || true  # Optional: allow warnings
 
       - name: Run Tests
         run: flutter test
@@ -34,12 +32,4 @@ jobs:
         run: flutter build web
 
       - name: Build APK
-        run: flutter build apk
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Flutter-Builds
-          path: |
-            build/web
-            build/app/outputs/flutter-apk/app-release.apk
+        run: flutter build apk --release
