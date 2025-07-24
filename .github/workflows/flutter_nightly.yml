@@ -1,34 +1,59 @@
-name: Flutter Build
+name: Flutter Nightly Build
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  workflow_dispatch:     # Allows manual trigger
 
 jobs:
   build:
+    name: Build Flutter App
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.7'
-          channel: stable
+          channel: 'stable'
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze
-        run: flutter analyze || true  # optional warning suppression
+      - name: Analyze (Optional)
+        run: flutter analyze
 
-      # 🔥 Removed "Run Tests" step
+      - name: Run Tests (if any)
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No tests found, skipping..."
+          fi
 
+      # --- Android APK ---
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # --- Web Build ---
       - name: Build Web
         run: flutter build web
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Zip Web Build
+        run: zip -r web-build.zip build/web
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: web-build.zip
