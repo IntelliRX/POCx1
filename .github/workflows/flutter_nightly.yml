@@ -1,14 +1,15 @@
-name: Flutter Nightly Build
+name: Flutter Nightly Web Build & Deploy
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight UTC
-  workflow_dispatch:     # Allows manual trigger
+    - cron: '0 2 * * *' # 2 AM UTC daily
+  workflow_dispatch:    # Manual trigger
 
 jobs:
   build:
-    name: Build Flutter App
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Needed to push to gh-pages
 
     steps:
       - name: Checkout repository
@@ -18,42 +19,24 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.7'
-          channel: 'stable'
+          channel: stable
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze (Optional)
+      - name: Analyze
         run: flutter analyze
 
-      - name: Run Tests (if any)
-        run: |
-          if [ -d "test" ]; then
-            flutter test
-          else
-            echo "No tests found, skipping..."
-          fi
+      - name: Run Tests
+        if: ${{ hashFiles('test/**') != '' }}
+        run: flutter test
 
-      # --- Android APK ---
-      - name: Build Android APK
-        run: flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      # --- Web Build ---
       - name: Build Web
-        run: flutter build web
+        run: flutter build web --release
 
-      - name: Zip Web Build
-        run: zip -r web-build.zip build/web
-
-      - name: Upload Web Build
-        uses: actions/upload-artifact@v4
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          name: flutter-web-build
-          path: web-build.zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
