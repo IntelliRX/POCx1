@@ -1,27 +1,33 @@
-name: Build and Deploy Flutter Web
+name: Flutter Web Build & Deploy
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Nightly at midnight UTC
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Flutter
+      - name: Install Flutter with Dart 3.8.1
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.1' # Update this to match your Flutter version if needed
+          flutter-version: '3.22.0'    # You can try '3.23.0' or 'master'
+          channel: 'beta'              # Use 'beta' or 'master' for Dart >=3.8.1
 
-      - name: Install Dependencies
+      - name: Enable Flutter Web
+        run: flutter config --enable-web
+
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Flutter Web App
+      - name: Build Flutter Web
         run: flutter build web --release
 
       - name: Deploy to GitHub Pages
