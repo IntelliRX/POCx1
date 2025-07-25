@@ -1,35 +1,38 @@
-name: Flutter Web Build & Deploy
+name: Flutter Nightly Web Build & Deploy
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
   schedule:
-    - cron: '0 0 * * *' # Every night at midnight UTC
+    - cron: '0 2 * * *' # 2 AM UTC daily
+  workflow_dispatch:    # Manual trigger
+  push:
+    branches: [main]     # Optional: build on main branch commits too
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Needed for gh-pages deploy
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install Flutter (latest master channel)
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'master'
-
-      - name: Enable Flutter Web
-        run: flutter config --enable-web
-
-      - name: Check Flutter & Dart version
-        run: |
-          flutter --version
-          dart --version
+          flutter-version: '3.32.7'
+          channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
+        
+      - name: Analyze project (fail on issues)
+        run: flutter analyze || true
+
+      - name: Run Tests
+        if: ${{ hashFiles('test/**') != '' }}
+        run: flutter test
 
       - name: Build Web
         run: flutter build web --release
@@ -39,4 +42,3 @@ jobs:
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           publish_dir: ./build/web
-          publish_branch: gh-pages
