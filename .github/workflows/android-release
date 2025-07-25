@@ -1,39 +1,57 @@
-name: Build and Release Android APK
+name: Release APK and Windows
 
 on:
   push:
     tags:
-      - 'v*'  # e.g., v1.0.0, v2.3.1
+      - 'v*'
 
 jobs:
   build:
-    name: Build APK
+    name: Build Android and Windows
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0' # or your version
+          flutter-version: '3.22.1'
 
-      - name: Get Flutter dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build Android APK
         run: flutter build apk --release
 
-      - name: Upload Release APK
+      - name: Build Windows App
+        run: flutter build windows
+
+      - name: Zip Windows App
+        run: |
+          cd build/windows/runner/Release
+          zip -r app.zip *
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Android APK
         uses: softprops/action-gh-release@v1
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows ZIP
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/windows/runner/Release/app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
